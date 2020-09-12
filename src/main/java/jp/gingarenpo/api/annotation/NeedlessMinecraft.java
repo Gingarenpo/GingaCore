@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  *
  */
 @Retention(SOURCE)
-@Target(METHOD)
+@Target({METHOD, CONSTRUCTOR})
 public @interface NeedlessMinecraft {
 
 }

@@ -1,6 +1,8 @@
 package jp.gingarenpo.api.mqo;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -8,6 +10,7 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import jp.gingarenpo.api.annotation.NeedlessMinecraft;
 import net.minecraft.client.Minecraft;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.util.ResourceLocation;
@@ -30,25 +33,38 @@ public class MQO {
 	/**
 	 * モデルがある場所を指定することで、そのモデルを読み込んだ新しいMQOオブジェクトを作成します。
 	 *
-	 * @param r
+	 * @param r モデルがある場所のリソースロケーション。
+	 * @throws IOException 存在しなかった時。
 	 */
-	public MQO(ResourceLocation r) {
-		// FIXED Client001: noSuchMethodErrorで止まるし不必要なので削除
-		// String path = "assets/" + r.getResourceDomain() + "/" + r.getResourcePath();
-		parse(r);
-	}
-
-	public MQO(String r) {
-		// 無理やりパスを生成します
+	public MQO(ResourceLocation r) throws IOException {
+		parse(Minecraft.getMinecraft().getResourceManager().getResource(r).getInputStream());
 	}
 
 	/**
-	 * ファイルを読み込んでその中身を解析します。
+	 * モデルがある場所を文字列でパスとして指定します。主にMinecraft以外の用途で使用する場合に使うことを想定しています。
+	 * このコンストラクタから呼び出した場合は、InputStreamはこちら側で閉じます（多分）。
+	 * @param r パス文字列。パスに関しては、リソースフォルダーからの相対パスで指定する必要があります。
+	 * 例えば、「src/main/resources」をソースフォルダとしている場合、「src/main/resources/test/abc.mqo」を
+	 * 読み込むには、rに「test/abc.mqo」を指定します。
 	 *
-	 * @param path
+	 * @throws IOException 指定されたファイルが存在しなかった時
 	 */
-	private void parse(ResourceLocation r) {
-		try (Scanner s = new Scanner(Minecraft.getMinecraft().getResourceManager().getResource(r).getInputStream())) {
+	@NeedlessMinecraft
+	public MQO(String r) throws IOException {
+		// Minecraftのリソースに頼らないやつ
+		InputStream is = ClassLoader.getSystemResourceAsStream(r);
+		if (is == null) throw new IOException(r + " is not found!");
+		parse(is);
+		is.close();
+	}
+
+	/**
+	 * InputStreamからファイルを読み込み、MQOフォーマットとして解釈してインスタンス内の値を設定します。
+	 *
+	 * @param is InputStreamを指定します。勝手に閉じないので2回目の呼び出しをする際はご注意
+	 */
+	private void parse(InputStream is) {
+		try (Scanner s = new Scanner(is)) {
 			// ということで読み込んでいきます。
 			// まずは「Object "~~" {」を探します
 
@@ -144,13 +160,6 @@ public class MQO {
 
 			}
 
-		} catch (IOException e) {
-			// クラッシュレポートです
-			e.printStackTrace();
-			CrashReport c = CrashReport.makeCrashReport(e, "No model found.");
-			c.makeCategory("Model Loading");
-			Minecraft.getMinecraft().addGraphicsAndWorldToCrashReport(c); // クラレポ表示
-			Minecraft.getMinecraft().displayCrashReport(c);
 		} catch (MQOException e) {
 			// クラッシュレポートです
 			e.printStackTrace();
@@ -161,9 +170,33 @@ public class MQO {
 		}
 	}
 
+	/**
+	 * このMQOファイルが持つオブジェクトを返します。オブジェクト名を指定する形で返します。オブジェクトが存在しない
+	 * 場合はNullが返ります。
+	 * @param name オブジェクト名。
+	 * @return オブジェクトがあればそのMQOObject、なければnull
+	 */
 	@Nullable
 	public MQOObject getObject(String name) {
 		return object.get(name);
+	}
+
+	/**
+	 * このMQOファイルが持つオブジェクトの一覧を返します。あまり使わないでください。ループさせる目的で使用する場合は
+	 * それ専用のメソッドを使用してください。
+	 * @return オブジェクト一覧
+	 */
+	public HashMap<String, MQOObject> getObjects() {
+		return object;
+	}
+
+	/**
+	 * MQOオブジェクトをコレクションとして返します。拡張for文にそのまんま使用できるのでループさせたいときはこちらを
+	 * ご利用ください。
+	 * @return ループできるコレクションとして設定されたMQOObject
+	 */
+	public Collection<MQOObject> getObjects4Loop() {
+		return object.values();
 	}
 
 	/**
