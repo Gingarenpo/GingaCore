@@ -40,6 +40,26 @@ public class GFileHelper {
 	private static String version = null;
 
 	/**
+	 * solvePathの検索モードで、modsフォルダを検索します。
+	 */
+	public static final int SEARCH_MODS = 1;
+
+	/**
+	 * solvePathの検索モードで、Minecraftの実行フォルダを検索します。
+	 */
+	public static final int SEARCH_RUN = 2;
+
+	/**
+	 * solvePathの検索モードで、自身のリソースを検索します。
+	 */
+	public static final int SEARCH_RESOURCE = 4;
+
+	/**
+	 * solvePathの検索モードで、ドライブルートフォルダを検索します。
+	 */
+	public static final int SEARCH_DRIVE = 8;
+
+	/**
 	 * 起動しているMinecraftのModフォルダを返します。
 	 * @return
 	 */
@@ -234,14 +254,160 @@ public class GFileHelper {
 	}
 
 	/**
-	 * バージョンチェック時の例外です。
+	 * バージョンチェック時の例外です。ラップしているだけなので中身はありません。
 	 * @author 銀河連邦
 	 *
 	 */
 	public class VersionCheckException extends Exception {
 
+		/**
+		 * シリアルナンバー
+		 */
+		private static final long serialVersionUID = 1L;
+
 		public VersionCheckException(String mes) {
 			super(mes);
 		}
 	}
+
+	// -----------------------------------------------------------------------------------------------------------
+	// Ver2.1 Added
+	// -----------------------------------------------------------------------------------------------------------
+
+	/**
+	 * <p>指定した文字列をパスとして認識して、そのパスを解決し、Mod内で読み込めるロケーションの形で読み込みを試みます。</p>
+	 * <hr>
+	 * <p>相対パスでも絶対パスでも構いません。パスを絶対パスとして認識した場合は、絶対パスとした際のファイルを作成して返します。ただし、
+	 * そのファイルが存在しない場合はnullを返します。したがって、nullチェックを行うだけで判断できます。</p>
+	 * <p>相対パスが指定された場合（相対パスと認識された場合）は、以下の優先度で存在を確認します。存在が確認できた時点でそのファイルの
+	 * インスタンスを作成し、返却します。いずれでも解決できない場合はnullを返します。したがって、相対パスで指定した結果がFileインスタンス
+	 * だった場合は、必ずその場所にファイルが存在していることになります（ただしその後削除された場合は動作未定です）。</p>
+	 * <p>相対パスの解決優先度は次の順番となっています。例で示す際、指定したstr引数（パス）は「abc.txt」だったとします。</p>
+	 * <ol>
+	 * <li>Modsディレクトリをルートとした相対パスとみなし、その中から探します。例→「C:\minecraft\mods\abc.txt」。</li>
+	 * <li>Minecraftが実行されているディレクトリをルートとした相対パスとみなします。例→「C:\minecraft\abc.txt」。</li>
+	 * <li>それでも見つからない場合、このクラスがロードされたクラスローダーからシステムリソースを指定しているものとみなし、当Mod内から
+	 * リソースを検出します。他Modの検出は行えません。例→「C:\minecraft\mods\GTC.jar\abc.txt」。</li>
+	 * <li>最終手段として、Minecraftを実行しているシステムドライブの直下をルートとした検索を行います。例→「C:\abc.txt」。ただし、これは
+	 * 管理者権限がない状態でシステムドライブを参照した場合などに読み込めない場合があります。</li>
+	 * </ol>
+	 * <p>なお、複数発見はされず、上記の優先度で最初に見つかったファイルを返します。優先度を変更することはできませんが、オーバーロードされた
+	 * メソッドを使用することで、特定の処理のみを実行させることができます。</p>
+	 * <hr>
+	 * <p>優先度の概念は将来変更される恐れがあります。優先度に依存した呼び出しを行わないで、なるべく絶対パスで記述することをお勧めします。</p>
+	 *
+	 * @param str 取得したいファイルを指定したパス。絶対パスを指定する場合は「C:\abc.txt」のようにドライブ名から入力してください。
+	 * 内部ではFileオブジェクトのパス取得結果によって判断しています。
+	 * @return 絶対パスでファイルが存在する場合、または相対パスで上記優先度をもとにファイルが存在したらそのファイルのインスタンスが返り、
+	 * いかなる検索をしてもファイルが見つからない場合はnullを返します。
+	 */
+	public static File solvePath(String str) {
+		// 絶対パスかそうでないかの判断を行う（簡易的なチェックですが）
+		File test = new File(str);
+		if (test.getPath().contentEquals(test.getAbsolutePath())) {
+			// 絶対パスの場合
+			return test;
+		}
+
+		// 相対パスの場合
+		File file = solvePathAtMods(str);
+		if (file != null) return file;
+		file = solvePathAtMinecraft(str);
+		if (file != null) return file;
+		file = solvePathAsResource(str);
+		if (file != null) return file;
+		file = solvePathAtDrive(str);
+		if (file != null) return file;
+		return null;
+	}
+
+	/**
+	 * <p>指定した文字列をパスと認識して、そのパスを指定された検索方法を使用して読み込みを試みます。</p>
+	 * <hr>
+	 * <p>このオーバーロードメソッドは、相対パスの解決に使用します。通常は優先度の高いもので検出された場合にそこで処理が終了するため
+	 * それより低いところのものが欲しい場合には取得できなくなります。その際に、場所が分かっている場合はこちらを利用できます。</p>
+	 * <p>ただ、場所が分かっているならこのメソッド使わなくてもいいと思うので、実質開発者専用のメソッドです。</p>
+	 * @param str 取得したいファイルを指定したパス。
+	 * @param flug 定数として指定します。「SEARCH_」から始まる定数を利用します。OR演算で複数指定することができますが、複数指定した
+	 * 場合は上記の優先度順に検索されます。
+	 * @return 指定されたファイルがあればFileインスタンス、なければnull。
+	 */
+	public static File solvePath(String str, int flug) {
+		File file = null; // まずは宣言しておく
+
+		if ((flug & SEARCH_MODS) != 0) {
+			file = solvePathAtMods(str);
+			if (file != null) return file;
+		}
+		if ((flug & SEARCH_RUN) != 0) {
+			file = solvePathAtMinecraft(str);
+			if (file != null) return file;
+		}
+		if ((flug & SEARCH_RESOURCE) != 0) {
+			file = solvePathAsResource(str);
+			if (file != null) return file;
+		}
+		if ((flug & SEARCH_DRIVE) != 0) {
+			file = solvePathAtDrive(str);
+			if (file != null) return file;
+		}
+
+		return file; // =null
+	}
+
+	/**
+	 * パスを解決する際に使用するもので、「Mods」ディレクトリを起点としたファイルオブジェクトを返します。内部でしか使用しない
+	 * ため使う必要はありません。
+	 *
+	 * @param str 文字列
+	 * @return あればFileインスタンス、なければnull
+	 */
+	private static File solvePathAtMods(String str) {
+		// Modsディレクトリを取得する
+		File mods = GFileHelper.getModsDir(); // Modsフォルダ
+		File file = new File(mods.getAbsolutePath() + "/" + str);
+		return (file.exists()) ? file : null;
+	}
+
+	/**
+	 * パスを解決する際に使用するもので、「Minecraft」ディレクトリを起点としたファイルオブジェクトを返します。内部でしか使用しない
+	 * ため使う必要はありません。
+	 *
+	 * @param str 文字列
+	 * @return あればFileインスタンス、なければnull
+	 */
+	private static File solvePathAtMinecraft(String str) {
+		// Modsディレクトリを取得する
+		File mods = Minecraft.getMinecraft().mcDataDir.getAbsoluteFile(); // Minecraftフォルダー
+		File file = new File(mods.getAbsolutePath() + "/" + str);
+		return (file.exists()) ? file : null;
+	}
+
+	/**
+	 * パスを解決するために使用するもので、このクラスが呼び出されているクラスローダーからリソースとして参照した際のファイルオブジェクトを
+	 * 返します。内部でしか使用しないため使う必要はありません。
+	 * @param str 文字列
+	 * @return
+	 */
+	private static File solvePathAsResource(String str) {
+		java.net.URL res = ClassLoader.getSystemResource(str);
+		return (res == null) ? null : new File(res.getPath());
+	}
+
+	/**
+	 * パスを解決する際に使用するもので、Minecraftのデータが格納してあるドライブ（Cがほとんどでしょう）から検索を試みます。
+	 * セキュリティ的にに怪しいところがあるため、フラグ指定の場合は使用すべきではありません。
+	 *
+	 * @param str 文字列
+	 * @return あればFileインスタンス、なければnull
+	 */
+	private static File solvePathAtDrive(String str) {
+		// Minecraftのフォルダを取得する
+		File mods = Minecraft.getMinecraft().mcDataDir.getAbsoluteFile(); // Minecraftフォルダー
+		// このフォルダの最初の文字がドライブレターになっている
+		File file = new File(mods.getAbsolutePath().substring(0, 3) + str); // C:\とか
+		return (file.exists()) ? file : null;
+	}
+
+
 }

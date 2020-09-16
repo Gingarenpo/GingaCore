@@ -211,6 +211,7 @@ public class MQO {
 		}
 	}
 
+	@SuppressWarnings("serial")
 	public class MQOException extends RuntimeException {
 		// 例外処理
 
