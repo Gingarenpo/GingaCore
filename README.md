@@ -2,6 +2,8 @@
 ![Logo](https://github.com/Gingarenpo/GingaCore/blob/master/logo.png)
 Minecraft ModdingにおけるModお役立ちメソッドを提供するものとなっております。基本的に配布は https://ginren.info/G-factory/ で行っております。
 
+**<Warning!!>** Since developers ***CANNOT*** use English well, please make all requests and opinions about this mod in Japanese. If you really don't want to use anything other than English, you can leave it as it is, but please note that *Gingarenpo will try to understand the content **with Google Translate***!
+
 ## 中身について
 このModは、導入するだけではMinecraft内に何か追加・変更を加えることはありません。前提Modとして、ほかのModで使用することができるヘルパーメソッドなどを追加したModとなっています。基本的には開発者である銀河連邦自身が適当に「こういうメソッド使いたいんだよな」って思ったものを適宜付け加えています。
 
