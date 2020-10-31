@@ -24,15 +24,15 @@ public class GPosHelper {
 	public static double getDistance(BlockPos p1, BlockPos p2) {
 		// 3平方の定理を使用する（斜辺^2 = 他の辺の2乗の和）
 		// まずそれぞれの長さを出す
-		int x = Math.abs(p1.getX() - p2.getX());
-		int y = Math.abs(p1.getY() - p2.getY());
-		int z = Math.abs(p1.getZ() - p2.getZ());
+		final int x = Math.abs(p1.getX() - p2.getX());
+		final int y = Math.abs(p1.getY() - p2.getY());
+		final int z = Math.abs(p1.getZ() - p2.getZ());
 
 		// 次に、XとZに対する直線距離を算出する
-		double xz = Math.sqrt(Math.pow(x, 2) + Math.pow(z, 2)); // 平面上の長さ
+		final double xz = Math.sqrt(Math.pow(x, 2) + Math.pow(z, 2)); // 平面上の長さ
 
 		// その出した座標に対して、Yと直線距離を算出する
-		double xyz = Math.sqrt(Math.pow(xz, 2) + Math.pow(y, 2)); // これが距離
+		final double xyz = Math.sqrt(Math.pow(xz, 2) + Math.pow(y, 2)); // これが距離
 
 		return xyz;
 	}
@@ -61,6 +61,19 @@ public class GPosHelper {
 	 */
 	public static double getDistance(int x1, int y1, int z1, int x2, int y2, int z2) {
 		return getDistance(new BlockPos(x1, y1, z1), new BlockPos(x2, y2, z2));
+	}
+
+	/**
+	 * 指定された全数値において、すべてが一致していればtrueを返します。1つでも異なればfalseを返します。
+	 * @param pos 調べたい数値。floatでいくらでも指定できます。
+	 * @return 全てが一致していればtrue、1つでも異なればfalse
+	 */
+	public static boolean areSameNumber(float ...pos) {
+		// 全ての数値が一致していたらtrue
+		for (int i = 0; i < pos.length - 1; i++) {
+			if (pos[i] != pos[i+1]) return false; // 1個でも違えば残念ながら不一致
+		}
+		return true;
 	}
 
 }

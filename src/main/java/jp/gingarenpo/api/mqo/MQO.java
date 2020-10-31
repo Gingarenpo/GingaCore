@@ -14,6 +14,7 @@ import jp.gingarenpo.api.annotation.NeedlessMinecraft;
 import net.minecraft.client.Minecraft;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.common.FMLCommonHandler;
 
 /**
  * このクラスは、MQOオブジェクトを作成します。このオブジェクト自体は基本的に使わず、サブオブジェクトを頻繁に使う
@@ -27,7 +28,7 @@ public class MQO {
 	/**
 	 * オブジェクトの名前をキーとして格納しています
 	 */
-	private HashMap<String, MQOObject> object = new HashMap<String, MQOObject>();
+	private final HashMap<String, MQOObject> object = new HashMap<String, MQOObject>();
 
 
 	/**
@@ -37,6 +38,10 @@ public class MQO {
 	 * @throws IOException 存在しなかった時。
 	 */
 	public MQO(ResourceLocation r) throws IOException {
+		if (FMLCommonHandler.instance().getEffectiveSide().isServer()) {
+			throw new RuntimeException("Server side startup!!!");
+		}
+		// getMinecraft()が使用できない環境が存在するらしい
 		parse(Minecraft.getMinecraft().getResourceManager().getResource(r).getInputStream());
 	}
 
@@ -52,7 +57,7 @@ public class MQO {
 	@NeedlessMinecraft
 	public MQO(String r) throws IOException {
 		// Minecraftのリソースに頼らないやつ
-		InputStream is = ClassLoader.getSystemResourceAsStream(r);
+		final InputStream is = ClassLoader.getSystemResourceAsStream(r);
 		if (is == null) throw new IOException(r + " is not found!");
 		parse(is);
 		is.close();
@@ -76,11 +81,11 @@ public class MQO {
 			int col = 0; // 行番号
 
 			// 正規表現一覧
-			String regexO = "Object \\\"(.+)\\\" \\{";
-			String regexVN = "[\t]*vertex [0-9]+ \\{";
-			String regexFN = "[\t]*face [0-9]+ \\{";
-			String regexV = "[\t]*[-]?[0-9\\.]+ [-]?[0-9\\.]+ [-]?[0-9\\.]+";
-			String regexF = "[\t]*[34] V\\(([0-9 ]+)\\) M\\(0\\) UV\\(([0123456789\\. ]+)\\)";
+			final String regexO = "Object \\\"(.+)\\\" \\{";
+			final String regexVN = "[\t]*vertex [0-9]+ \\{";
+			final String regexFN = "[\t]*face [0-9]+ \\{";
+			final String regexV = "[\t]*[-]?[0-9\\.]+ [-]?[0-9\\.]+ [-]?[0-9\\.]+";
+			final String regexF = "[\t]*[34] V\\(([0-9 ]+)\\) M\\(0\\) UV\\(([0123456789\\. ]+)\\)";
 
 			// フラグ一覧
 			boolean fo = false;
@@ -90,7 +95,7 @@ public class MQO {
 			while (s.hasNextLine()) {
 				col++;
 				// 形しか見ないのでこの3つ以外見ない
-				String line = s.nextLine(); // 1行取得
+				final String line = s.nextLine(); // 1行取得
 				if (!Pattern.matches(regexO, line) && !Pattern.matches(regexV, line)
 						&& !Pattern.matches(regexF, line) && !Pattern.matches("[\t]*\\}", line)
 						&& !Pattern.matches(regexVN, line)
@@ -122,10 +127,10 @@ public class MQO {
 						throw new MQOException("Invalid mqo format!! (face expected but not.) at line " + col);
 
 					// それを次の面番号に追加
-					Matcher m = Pattern.compile(regexF).matcher(line); // 作成して…
+					final Matcher m = Pattern.compile(regexF).matcher(line); // 作成して…
 					m.find(); // 絶対にあるはず
-					String vnum = m.group(1); // 頂点番号の格納
-					String uvnum = m.group(2); // UVの格納（頂点倍）
+					final String vnum = m.group(1); // 頂点番号の格納
+					final String uvnum = m.group(2); // UVの格納（頂点倍）
 
 					// どうなっているかというと、グループ1=頂点番号（1 3 5） グループ2=材質番号（無視）
 					// グループ3=UVマッピング（0-1正規化、頂点番号と同じ）
@@ -137,15 +142,14 @@ public class MQO {
 						throw new MQOException("Invalid mqo format!! (vertex expected but not.) at line " + col);
 
 					// それを次の頂点番号に追加
-					Matcher m = Pattern.compile(regexV).matcher(line); // 作成して…
+					final Matcher m = Pattern.compile(regexV).matcher(line); // 作成して…
 					m.find(); // 絶対にあるはず
-					String vnum = m.group(); // 頂点座標の格納
-
+					final String vnum = m.group(); // 頂点座標の格納
 					obj.getVertexs().add(new MQOVertex(obj, vnum));
 				} else if (Pattern.matches(regexO, line)) {
 					// Objectの始まりだった場合
 					// System.out.println("オブジェクトの始まりです");
-					Matcher m = Pattern.compile(regexO).matcher(line);
+					final Matcher m = Pattern.compile(regexO).matcher(line);
 					m.find();
 					obj = new MQOObject(this, m.group(1)); // 名前で作成
 					fo = true;
@@ -160,10 +164,10 @@ public class MQO {
 
 			}
 
-		} catch (MQOException e) {
+		} catch (final MQOException e) {
 			// クラッシュレポートです
 			e.printStackTrace();
-			CrashReport c = CrashReport.makeCrashReport(e, "MQO format error");
+			final CrashReport c = CrashReport.makeCrashReport(e, "MQO format error");
 			c.makeCategory("Model Loading");
 			Minecraft.getMinecraft().addGraphicsAndWorldToCrashReport(c); // クラレポ表示
 			Minecraft.getMinecraft().displayCrashReport(c);
@@ -204,8 +208,8 @@ public class MQO {
 	 */
 	public void draw() {
 		// ラッピング処理
-		for (MQOObject obj : object.values()) {
-			for (MQOFace face : obj.getFaces()) {
+		for (final MQOObject obj : object.values()) {
+			for (final MQOFace face : obj.getFaces()) {
 				face.drawFace();
 			}
 		}

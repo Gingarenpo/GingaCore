@@ -7,11 +7,11 @@ package jp.gingarenpo.api.mqo;
  */
 public class MQOVertex {
 
-	private float x;
-	private float y;
-	private float z; // 以上、座標数値
+	private final float x;
+	private final float y;
+	private final float z; // 以上、座標数値
 
-	private MQOObject mqo; // 親オブジェクト
+	private final MQOObject mqo; // 親オブジェクト
 
 	public MQOVertex(MQOObject mqo, String vnum) {
 		// MQOの頂点記述方式に従って格納
@@ -19,8 +19,8 @@ public class MQOVertex {
 		// 正規化してあること前提での処理
 		this.mqo = mqo; // 代入
 
-		String[] v = vnum.split(" "); // 分割して…
-		// System.out.println("Vertex["+v.length+"]");
+		final String[] v = vnum.split(" "); // 分割して…
+		//System.out.println("Vertex["+v.length+"]");
 		if (v.length != 3) // MQOとして不適切
 			throw mqo.getParent().new MQOException("Illegal Vertex Position!!");
 
