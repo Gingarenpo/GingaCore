@@ -37,7 +37,7 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
  *
  * @author 銀河連邦
  * @since 2020-09-06（Ver2.0）
- * @version 2.1
+ * @version 2.2
  */
 
 @Mod(modid = GingaCore.MODID, name = "GingaCore", version = GingaCore.version)
@@ -47,7 +47,7 @@ public class GingaCore {
 
 	public static Logger log;
 	public static final int majorVersion = 2; // バージョン番号の上位
-	public static final int minorVersion = 1; // 下位（全部格納するため小数点にしていますが3つ以上増やしません）
+	public static final int minorVersion = 2; // 下位（全部格納するため小数点にしていますが3つ以上増やしません）
 	public static final String version = majorVersion + "." + minorVersion; // 起動時に実行するバージョンの取得
 	public static final String MODID = "gingacore";
 
