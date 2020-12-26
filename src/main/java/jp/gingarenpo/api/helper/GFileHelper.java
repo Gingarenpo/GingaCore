@@ -2,9 +2,13 @@ package jp.gingarenpo.api.helper;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
+import java.net.URLDecoder;
+import java.security.CodeSource;
+import java.security.ProtectionDomain;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -407,6 +411,46 @@ public class GFileHelper {
 		// このフォルダの最初の文字がドライブレターになっている
 		File file = new File(mods.getAbsolutePath().substring(0, 3) + str); // C:\とか
 		return (file.exists()) ? file : null;
+	}
+
+	// -----------------------------------------------------------------------------------------------------------
+	// Ver2.2 Added
+	// -----------------------------------------------------------------------------------------------------------
+
+	/**
+	 * このメソッドは、URLなどで生成されたパスを無理くり変換したものを、正規化した絶対パスに直すことができるメソッドです。例えば、
+	 * JarファイルのリソースURLを取得すると「file:/C:/abc…」と言った余分な部分が出てしまいます。本来の絶対パスは、Windowsなら
+	 * ドライブレターから始まるはず。その是正をするメソッドとなります。返される文字列をFileなりFilesなりで使用すれば
+	 * まともに動くはずです。
+	 * <hr>
+	 * <span style='color: red; font-weight: bold;'>Windowsでしか動作確認をしていないため、Macなどでは壊れる可能性があります。</span>
+	 *
+	 * @param path 変換したいパス。
+	 * @return 変換したパス。
+	 */
+	public static String getAbsoluteNormalizePath(String path) {
+		String res = null;
+		if (path.startsWith("file:/")) {
+			res = path.substring(6);
+		}
+		else if (path.startsWith("/")) {
+			res = path.substring(1);
+		}
+		return res;
+	}
+
+	/**
+	 * 指定されたクラスが存在するURLを返却します。Jarファイルの場合は自身の実行Jarファイルが返ってきます。というかもっぱらJarファイル用に最適化
+	 * しています。
+	 * @param clazz パスを取得したいクラス。
+	 * @return パスクラス。
+	 * @throws UnsupportedEncodingException エンコードが存在しない場合
+	 */
+	public static String getAbsoluteClassPath(Class<?> clazz) throws UnsupportedEncodingException {
+		final ProtectionDomain pd = clazz.getProtectionDomain();
+		final CodeSource cs = pd.getCodeSource(); // コードソース
+		final String path = getAbsoluteNormalizePath(URLDecoder.decode(cs.getLocation().getPath(), "UTF-8")); // クラス自体があるそこまでの絶対パスでJarなら.jar!以降要らない
+		return path.substring(0, path.indexOf("!")); // これでよし
 	}
 
 
