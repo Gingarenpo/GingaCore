@@ -1,5 +1,7 @@
 package jp.gingarenpo.api.mqo;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -11,6 +13,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import jp.gingarenpo.api.annotation.NeedlessMinecraft;
+import jp.gingarenpo.api.helper.GMathHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.util.ResourceLocation;
@@ -28,7 +31,7 @@ public class MQO {
 	/**
 	 * オブジェクトの名前をキーとして格納しています
 	 */
-	private final HashMap<String, MQOObject> object = new HashMap<String, MQOObject>();
+	private HashMap<String, MQOObject> object = new HashMap<String, MQOObject>();
 
 
 	/**
@@ -46,11 +49,30 @@ public class MQO {
 	}
 
 	/**
+	 * Minecraftの機能に依存せずにモデルを扱いたい場合に使用します。そのモデルを読み込んだ新しいMQOオブジェクトを作成します。
+	 * こちらはFileオブジェクトから指定します。通常はこちらを使用してください。以下に記してあるStringによる指定は、非推奨です。
+	 * リソースは自動的に閉じるようにしてあります。
+	 *
+	 * @param file ファイルオブジェクト。
+	 * @throws IOException 存在しなかった時。
+	 */
+	@NeedlessMinecraft
+	public MQO(File file) throws IOException {
+		// ファイルの中身から単純に生成する。
+		if (!file.exists()) throw new IOException("File is not found.");
+		if (!file.getName().endsWith(".mqo")) throw new IOException("This file is not MQO file.");
+		FileInputStream fis = new FileInputStream(file);
+		parse(fis);
+		fis.close();
+	}
+
+	/**
 	 * モデルがある場所を文字列でパスとして指定します。主にMinecraft以外の用途で使用する場合に使うことを想定しています。
 	 * このコンストラクタから呼び出した場合は、InputStreamはこちら側で閉じます（多分）。
 	 * @param r パス文字列。パスに関しては、リソースフォルダーからの相対パスで指定する必要があります。
 	 * 例えば、「src/main/resources」をソースフォルダとしている場合、「src/main/resources/test/abc.mqo」を
 	 * 読み込むには、rに「test/abc.mqo」を指定します。
+	 * 申し訳ありませんが、リソース外のMQOファイルにアクセスする場合は上記「File」による指定をお願いします。
 	 *
 	 * @throws IOException 指定されたファイルが存在しなかった時
 	 */
@@ -61,6 +83,16 @@ public class MQO {
 		if (is == null) throw new IOException(r + " is not found!");
 		parse(is);
 		is.close();
+	}
+
+	/**
+	 * クローンを作成する際に使用する専用のコンストラクタです。このコンストラクタは使用してはいけません（もっぱら使えないようにしている）
+	 *
+	 * @param orig
+	 */
+	private MQO(MQO orig) {
+		// 内部でのみ使用する
+		this.object = (HashMap<String, MQOObject>) orig.object.clone();
 	}
 
 	/**
@@ -175,6 +207,67 @@ public class MQO {
 	}
 
 	/**
+	 * 任意座標の正規化を行います。引数に数字を指定することで、中心を0としたときにその指定した数値までの大きさにモデルの座標を直します。
+	 * 例えば、「3」を指定した際は、XYZがそれぞれ「-1.5～1.5」の間に収まるように（最大の長さが3になるように）調整します。
+	 * 精度はそこまで高くないため、極端に大きく細かなオブジェクトに対して実行すると切り捨てられて形が崩壊するかもしれません。
+	 *
+	 * 挙動不審なことが多いため、このメソッドは正規化した後返り値として正規化前のMQOオブジェクトを返します。通常は直接メソッドを
+	 * 叩いて構いませんが、何かの都合でロールバックしたい場合などは、代入しておくとバックアップの代わりにもなります。
+	 *
+	 * ※全座標が指定したサイズ未満である場合は実行することで拡大されてしまう可能性があります。（修正する予定ですが）
+	 *
+	 * @param size 数字で指定します。指定したサイズが最大の長さになるように正規化します。
+	 * @return この正規化を実行する前のMQOオブジェクト。
+	 *
+	 *
+	 */
+	public MQO normalize(double size) {
+		// まずロールバックできるように自分自身を代入
+		MQO original = (MQO) this.clone();
+
+		// 効率悪いけど全部のオブジェクトに対して作業を繰り返す
+		double minX = 0, minY = 0, minZ = 0, maxX = 0, maxY = 0, maxZ = 0; // それぞれの頂点に対する最大値を一時的に代入するもの
+		for (MQOObject obj : this.getObjects4Loop()) {
+			// オブジェクトの頂点座標を取得する
+			for (MQOVertex vertex : obj.getVertexs()) {
+				// 全ての頂点に対して最小値と最大値を算出していく
+				if (minX > vertex.getX()) minX = vertex.getX();
+				if (maxX < vertex.getX()) maxX = vertex.getX();
+				if (minY > vertex.getY()) minY = vertex.getY();
+				if (maxY < vertex.getY()) maxY = vertex.getY();
+				if (minZ > vertex.getZ()) minZ = vertex.getZ();
+				if (maxZ < vertex.getZ()) maxZ = vertex.getZ();
+			}
+		}
+		// ここで、正規化する前の最大・最小座標が入る
+		System.out.println("正規化前座標最小XYZ: " + minX + ", " + minY + ", " + minZ + ", 最大XYZ: " + maxX + ", " + maxY + ", " + maxZ);
+
+		// 次に、サイズに最適化するための係数を算出する
+		// XYZそれぞれの距離を算出する
+		double sizeX = GMathHelper.distance(minX, maxX);
+		double sizeY = GMathHelper.distance(minY, maxY);
+		double sizeZ = GMathHelper.distance(minZ, maxZ); // 以上、3つとも距離を算出する
+		// 大きい数を割る
+		double per = size / Math.max(Math.max(sizeX, sizeY), sizeZ); // この係数を頂点にかけることで正規化が可能
+
+		// もう一度ループ回します
+		for (MQOObject obj : this.getObjects4Loop()) {
+			// オブジェクトの頂点座標を取得する
+			for (MQOVertex vertex : obj.getVertexs()) {
+				// 全ての頂点の全座標に対してさっきの係数をかける
+				vertex.setX(vertex.getX() * per);
+				vertex.setY(vertex.getY() * per);
+				vertex.setZ(vertex.getZ() * per);
+			}
+		}
+
+		// 処理終了（faceの方には頂点番号しか格納していないので弄る必要がない）
+		System.out.println("正規化後座標最小XYZ: " + minX * per + ", " + minY * per + ", " + minZ * per + ", 最大XYZ: " + maxX * per + ", " + maxY * per + ", " + maxZ * per);
+		return original;
+
+	}
+
+	/**
 	 * このMQOファイルが持つオブジェクトを返します。オブジェクト名を指定する形で返します。オブジェクトが存在しない
 	 * 場合はNullが返ります。
 	 * @param name オブジェクト名。
@@ -213,6 +306,30 @@ public class MQO {
 				face.drawFace();
 			}
 		}
+	}
+
+	/**
+	 * @deprecated 使用しないでください。
+	 * 従来の方式で描画を行います。Minecraftに依存しないで描けますがバグが多いのと陰影の表現が全く効かないので使用しないでください。
+	 */
+	public void drawOld() {
+		// ラッピング処理
+		for (final MQOObject obj : object.values()) {
+			for (final MQOFace face : obj.getFaces()) {
+				face.drawFaceOld();
+			}
+		}
+	}
+
+	/**
+	 * このMQOオブジェクトを複製します。挙動不審です。
+	 * @return
+	 */
+	@Override
+	public MQO clone() {
+		// クローンする際は、全パラメーターを代入しなくてはならない
+		// その際は、コンストラクタに任せている
+		return new MQO(this);
 	}
 
 	@SuppressWarnings("serial")

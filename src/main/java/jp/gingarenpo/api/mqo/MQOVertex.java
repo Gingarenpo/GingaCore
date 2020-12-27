@@ -7,9 +7,9 @@ package jp.gingarenpo.api.mqo;
  */
 public class MQOVertex {
 
-	private final float x;
-	private final float y;
-	private final float z; // 以上、座標数値
+	private double x;
+	private double y;
+	private double z; // 以上、座標数値
 
 	private final MQOObject mqo; // 親オブジェクト
 
@@ -32,19 +32,33 @@ public class MQOVertex {
 		// 終わり
 	}
 
-	// ポジションは後からセットする必要がないのでreadonly
+	// 正規化に必要なためsetも入れているが外部からの呼び出しは不可能（同一パッケージ内のみ）
 
-	public float getX() {
+	public double getX() {
 		return x;
 	}
 
-	public float getY() {
+	public double getY() {
 		return y;
 	}
 
-	public float getZ() {
+	public double getZ() {
 		return z;
 	}
+
+	void setX(double x) {
+		this.x = x;
+	}
+
+	void setY(double y) {
+		this.y = y;
+	}
+
+	void setZ(double z) {
+		this.z = z;
+	}
+
+
 
 	/**
 	 * この頂点の属するMQOオブジェクトを返します。

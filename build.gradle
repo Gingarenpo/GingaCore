@@ -1,0 +1,21 @@
+tasks.withType(Jar) {
+	compileJava.options.encoding = 'UTF-8'
+	compileApiJava.options.encoding = 'UTF-8'
+}
+
+dependencies {
+	compile fileTree(dir: 'lib', include: '*.jar')
+}
+
+sourceSets.main {
+	java.srcDirs project.projectDir.name
+	resources.srcDirs project.projectDir.name
+	resources.exclude 'dats'
+}
+version = "2.0-beta1"
+
+jar {
+	manifest {
+		attributes 'Main-Class': 'jp.gingarenpo.gtc.directly.Main'
+	}
+}

@@ -68,7 +68,7 @@ public class GPosHelper {
 	 * @param pos 調べたい数値。floatでいくらでも指定できます。
 	 * @return 全てが一致していればtrue、1つでも異なればfalse
 	 */
-	public static boolean areSameNumber(float ...pos) {
+	public static boolean areSameNumber(double ...pos) {
 		// 全ての数値が一致していたらtrue
 		for (int i = 0; i < pos.length - 1; i++) {
 			if (pos[i] != pos[i+1]) return false; // 1個でも違えば残念ながら不一致

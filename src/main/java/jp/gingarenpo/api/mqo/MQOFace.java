@@ -8,6 +8,9 @@ import jp.gingarenpo.api.helper.GPosHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 
+import static org.lwjgl.opengl.GL11.GL_RGBA4;
+import static org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE;
+
 /**
  * MQOの面を格納するクラスです。この中にはさらに頂点も格納しているため、このクラスからOpenGL描画を行うこともできます
  *
@@ -36,7 +39,7 @@ public class MQOFace {
 
 	private final MQOObject mqo; // 親オブジェクト
 	private final int[] v; // 頂点番号を格納（固定なのでプリミティブ配列で）
-	private final ArrayList<float[]> uv = new ArrayList<float[]>(); // 頂点対応のUV座標を格納
+	private final ArrayList<double[]> uv = new ArrayList<double[]>(); // 頂点対応のUV座標を格納
 	private int facing; // この面が向いている向き。
 
 	/**
@@ -61,13 +64,13 @@ public class MQOFace {
 			throw mqo.getParent().new MQOException("Illegal UV or Vertex parameter!!");
 
 		// X,Y,Zそれぞれを代入する
-		final float[] vX = new float[vs.length];
-		final float[] vY = new float[vs.length];
-		final float[] vZ = new float[vs.length]; // それぞれ座標を格納するもの
+		final double[] vX = new double[vs.length];
+		final double[] vY = new double[vs.length];
+		final double[] vZ = new double[vs.length]; // それぞれ座標を格納するもの
 		v = new int[vs.length]; // 指定した数で初期化
 		for (int i = 0; i < vs.length; i++) {
 			v[i] = Integer.parseInt(vs[i]); // 頂点番号を代入
-			uv.add(i, new float[] {Float.parseFloat(uvs[i*2]), Float.parseFloat(uvs[i*2+1])}); // UVをね
+			uv.add(i, new double[] {Double.parseDouble(uvs[i*2]), Double.parseDouble(uvs[i*2+1])}); // UVをね
 			vX[i] = mqo.getVertexs().get(v[i]).getX();
 			vY[i] = mqo.getVertexs().get(v[i]).getY();
 			vZ[i] = mqo.getVertexs().get(v[i]).getZ();
@@ -120,5 +123,23 @@ public class MQOFace {
 		t.draw();
 
 		// GL11.glEnd(); // 終了
+	}
+
+	/**
+	 * @deprecated 使用しないでください。もっぱらこれは旧メソッドとの互換性を保つために残しています。
+	 */
+	public void drawFaceOld() {
+		// 非推奨
+
+		GL11.glGenTextures(); // テクスチャ作成
+		GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+		GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGB, 512, 512, GL11.GL_COLOR_INDEX, GL_UNSIGNED_BYTE, 0, 0);
+		GL11.glBegin((v.length == 3) ? GL11.GL_TRIANGLES : GL11.GL_QUADS); // 三角形か四角形か
+		for (int i = 0;  i < v.length; i++) {
+			GL11.glTexCoord2d(uv.get(i)[0], uv.get(i)[1]); // テクスチャUV座標を指定（Vは反転する！！）
+			GL11.glVertex3d(mqo.getVertexs().get(v[i]).getX(),
+					mqo.getVertexs().get(v[i]).getY(), mqo.getVertexs().get(v[i]).getZ()); // 頂点を指定
+		}
+		GL11.glEnd();
 	}
 }
