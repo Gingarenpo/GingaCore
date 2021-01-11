@@ -25,9 +25,9 @@ public class MQOVertex {
 			throw mqo.getParent().new MQOException("Illegal Vertex Position!!");
 
 		// 代入していく
-		x = Float.parseFloat(v[0]);
-		y = Float.parseFloat(v[1]);
-		z = Float.parseFloat(v[2]);
+		x = Double.parseDouble(v[0]);
+		y = Double.parseDouble(v[1]);
+		z = Double.parseDouble(v[2]);
 
 		// 終わり
 	}

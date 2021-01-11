@@ -116,7 +116,7 @@ public class MQO {
 			final String regexO = "Object \\\"(.+)\\\" \\{";
 			final String regexVN = "[\t]*vertex [0-9]+ \\{";
 			final String regexFN = "[\t]*face [0-9]+ \\{";
-			final String regexV = "[\t]*[-]?[0-9\\.]+ [-]?[0-9\\.]+ [-]?[0-9\\.]+";
+			final String regexV = "[\t]*[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)? [+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)? [+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?";
 			final String regexF = "[\t]*[34] V\\(([0-9 ]+)\\) M\\(0\\) UV\\(([0123456789\\. ]+)\\)";
 
 			// フラグ一覧
